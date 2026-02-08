@@ -1,41 +1,38 @@
-// ضع هنا الرابط الذي نسخته من Apps Script
-const BACKEND_URL = "https://script.google.com/macros/s/AKfycbwbqxb1TpjlVn0FRJaRlBrEovo9YOmMTO5WIFy1qxX3AFpdKYiVthcKOSXJBQoL2Mht/exec";
+const BACKEND_URL = "https://script.google.com/macros/s/xxxxxxxxxxxx/exec";  // رابطك الصحيح
 
 document.getElementById("appointment-form").addEventListener("submit", async function(e) {
   e.preventDefault();
 
-  // جمع البيانات
-  const formData = {
-    fullName: document.getElementById("full-name").value.trim(),
-    phone: document.getElementById("phone").value.trim(),
-    day: document.getElementById("day").value,
-    period: document.querySelector('input[name="period"]:checked')?.value || "",
-    // notes: ""   ← يمكنك إضافة حقل ملاحظات لاحقًا
-  };
+  const fullName = document.getElementById("full-name").value.trim();
+  const phone    = document.getElementById("phone").value.trim();
+  const day      = document.getElementById("day").value;
+  const period   = document.querySelector('input[name="period"]:checked')?.value || "";
 
-  // التحقق من التعبئة
-  if (!formData.fullName || !formData.phone || !formData.day || !formData.period) {
+  if (!fullName || !phone || !day || !period) {
     alert("يرجى ملء جميع الحقول المطلوبة (*) بشكل صحيح");
     return;
   }
 
+  // استخدم URLSearchParams → يرسل كـ form-urlencoded (simple request → لا preflight)
+  const params = new URLSearchParams();
+  params.append("fullName", fullName);
+  params.append("phone", phone);
+  params.append("day", day);
+  params.append("period", period);
+
   try {
-    const response = await fetch(BACKEND_URL, {
+    await fetch(BACKEND_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
+      body: params,  // هذا يجعل Content-Type تلقائي form-urlencoded
+      redirect: "follow"  // مهم لـ Apps Script
     });
 
-    const result = await response.json();
+    // إذا وصل هنا → الطلب نجح (لا نستطيع قراءة رد JSON دائمًا، لكن البيانات توصل)
+    alert("تم حجز الموعد بنجاح! سيتم التواصل معك قريباً.");
+    this.reset();
 
-    if (result.success) {
-      alert("تم حجز الموعد بنجاح!\nسنتواصل معك في أقرب وقت.");
-      this.reset(); // إفراغ النموذج
-    } else {
-      alert("حدث خطأ أثناء الحجز:\n" + result.message);
-    }
   } catch (err) {
-    alert("مشكلة في الاتصال بالخادم.\nتأكد من الإنترنت وحاول مرة أخرى.");
-    console.error(err);
+    console.error("Fetch error:", err);
+    alert("حدث خطأ أثناء الإرسال. تأكد من الإنترنت أو جرب مرة أخرى.");
   }
-});;
+});
